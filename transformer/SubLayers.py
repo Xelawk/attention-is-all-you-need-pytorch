@@ -15,7 +15,7 @@ class MultiHeadAttention(nn.Module):
         self.n_head = n_head
         self.d_k = d_k
         self.d_v = d_v
-
+        # n_head * d_k就是Q和K的维度，目的是保证能被n_head整除
         self.w_qs = nn.Linear(d_model, n_head * d_k, bias=False)
         self.w_ks = nn.Linear(d_model, n_head * d_k, bias=False)
         self.w_vs = nn.Linear(d_model, n_head * d_v, bias=False)
@@ -52,7 +52,7 @@ class MultiHeadAttention(nn.Module):
         # Combine the last two dimensions to concatenate all the heads together: b x lq x (n*dv)
         q = q.transpose(1, 2).contiguous().view(sz_b, len_q, -1)
         q = self.dropout(self.fc(q))
-        q += residual
+        q += residual  # 缓解网络退化的问题
 
         q = self.layer_norm(q)
 
@@ -61,7 +61,7 @@ class MultiHeadAttention(nn.Module):
 
 class PositionwiseFeedForward(nn.Module):
     ''' A two-feed-forward-layer module '''
-
+    """没啥说的，前馈层"""
     def __init__(self, d_in, d_hid, dropout=0.1):
         super().__init__()
         self.w_1 = nn.Linear(d_in, d_hid) # position-wise
@@ -75,7 +75,7 @@ class PositionwiseFeedForward(nn.Module):
 
         x = self.w_2(F.relu(self.w_1(x)))
         x = self.dropout(x)
-        x += residual
+        x += residual   # 应该叫短接比较合适，缓解网络退化的问题
 
         x = self.layer_norm(x)
 

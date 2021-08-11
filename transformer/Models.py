@@ -9,11 +9,13 @@ __author__ = "Yu-Hsiang Huang"
 
 
 def get_pad_mask(seq, pad_idx):
+    """屏蔽pad到的地方，pad_idx处为False"""
     return (seq != pad_idx).unsqueeze(-2)
 
 
 def get_subsequent_mask(seq):
     ''' For masking out the subsequent info. '''
+    """decoder计算attention时要用到，就是生成一个下三角矩阵，主要作用是屏蔽未来时刻单词的信息"""
     sz_b, len_s = seq.size()
     subsequent_mask = (1 - torch.triu(
         torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).bool()
@@ -28,7 +30,8 @@ class PositionalEncoding(nn.Module):
         # Not a parameter
         self.register_buffer('pos_table', self._get_sinusoid_encoding_table(n_position, d_hid))
 
-    def _get_sinusoid_encoding_table(self, n_position, d_hid):
+    @staticmethod
+    def _get_sinusoid_encoding_table(n_position, d_hid):
         ''' Sinusoid position encoding table '''
         # TODO: make it with torch instead of numpy
 
@@ -54,12 +57,13 @@ class Encoder(nn.Module):
 
         super().__init__()
 
-        self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=pad_idx)
+        self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=pad_idx)  # 可训练的embedding矩阵，pad_idx处为0.
         self.position_enc = PositionalEncoding(d_word_vec, n_position=n_position)
         self.dropout = nn.Dropout(p=dropout)
         self.layer_stack = nn.ModuleList([
+            # d_model：embedding size; d_inner: hidden layer size
             EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
-            for _ in range(n_layers)])
+            for _ in range(n_layers)])   # 堆叠N=6个encoder
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.scale_emb = scale_emb
         self.d_model = d_model
